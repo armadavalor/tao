@@ -1311,7 +1311,7 @@ unsafe fn init<T: 'static>(
           )?;
           Some((distance, monitor, position.into()))
         })
-        .min_by_key(|(distance, ..)| *distance)
+        .min_by(|(a, ..), (b, ..)| a.total_cmp(b))
         .map(|(_, monitor, position)| (monitor, position))
     })
     .unwrap_or_else(|| (monitor::primary_monitor(), (CW_USEDEFAULT, CW_USEDEFAULT)));
@@ -1572,7 +1572,7 @@ fn position_on_monitor(
   (x, y): (i32, i32),
   (width, height): (i32, i32),
   frame_thickness: i32,
-) -> Option<(PhysicalPosition<i32>, i32)> {
+) -> Option<(PhysicalPosition<i32>, f64)> {
   let position = position.to_physical::<i32>(dpi_to_scale_factor(dpi));
 
   // Only the starting position x needs to be accounted
@@ -1581,7 +1581,9 @@ fn position_on_monitor(
     && y <= position.y
     && position.y <= y + height
   {
-    let distance = (position.x - x).abs() + (position.y - y).abs();
+    let dx = f64::from(position.x - x).powi(2);
+    let dy = f64::from(position.y - y).powi(2);
+    let distance = (dx + dy).sqrt();
     Some((position, distance))
   } else {
     None
@@ -1604,7 +1606,7 @@ mod tests {
     let (_, primary_distance) = primary.unwrap();
     let (physical, external_distance) = external.unwrap();
     assert_eq!(physical, PhysicalPosition::new(1920, 0));
-    assert_eq!(external_distance, 0);
+    assert_eq!(external_distance, 0.0);
     assert!(external_distance < primary_distance);
   }
 }
